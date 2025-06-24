@@ -1,0 +1,88 @@
+---
+title: "Which U.S. State Has The Most Efficient Lawmakers?"
+author: "Chris DeDonato"
+date: "June 24th, 2025"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(knitr)
+
+billsdata <- read.csv("C:/Users/thege/Documents/Bill Data/Clean/combined_state_data.csv")
+betterbillsdata <- read.csv("C:/Users/thege/Documents/Bill Data/betterbillsdata.csv")
+```
+
+## Introduction
+
+The United States of America are known for their bicameral legislative body. Each state has a slate of representatives, the size of which is determined by the population of the state. These representatives have the power to sponsor bills, which are put before the House, Senate, and eventually the President in order to become law. However, as one might guess, no two states' representatives successfully sponsor bills at the same rate. So, the question stands: which state's representatives, on average, get the most bills passed into law?
+
+## The Data
+
+Before we can answer this question, we need to clarify what we are asking. The time frame we will be looking at for this problem will be from 1973-2025, which as of the writing of this report is current day. This covers the 93rd through the 119th Congresses. The question we want to answer, specifically, is: On average, which state's representatives sponsored the most bills which were signed into law?
+
+In order to answer this, we must first gather data on all bills sponsored between 1973 and today. For this, we will use the official U.S. Congress website, [congress.gov](congress.gov). More specifically, we will use the [advanced search](https://www.congress.gov/advanced-search/legislation) feature to filter the bills to only include bills that were both sponsored between 1973 and 2025 and were signed into law. Performing this search yielded 13,358 laws, as of June 23rd, 2025. 
+
+The data was downloaded and collected in .csv format, each file containing the Legislation Number, URL, Congress, Title, Sponsor, Party of Sponsor, and Date of Introduction for each bill. Notably missing from this data is the state of the sponsor, which is what we need to answer our original question. This problem will be solved in the next section.
+
+## Cleaning
+
+Since the Congress website only allows a maximum of 2,500 observations per download, our data collection required 6 seperate .csv files, collectively containing data about the bills passed between 1973 and 2025. The first task in each of these .csv files was to extract the state of origin for each sponsor. Thankfully, the state is written in the sponsor's name. For example: representative Tom Bliley from Virginia is entered in the spreadsheet as "Bliley, Tom [Rep.-R-VA-3]". However, some representatives do not have a district number, and are instead listed as "At Large". This was rectified by using the "Find and Replace" tool in Google Sheets, and replacing every instance of "At Large" with "00" to match the format of the other entries.
+
+Using a formula in Google Sheets, we were able to create a new column containing only the state from each sponsor's entry. The code used was as follows: `=IFS(LEFT(RIGHT(B2, 4))="-", LEFT(RIGHT(B2, 6), 2), LEFT(RIGHT(B2, 4))<>"-",LEFT(RIGHT(B2, 5), 2))`
+This code accounts for the fact that some districts have single digits (ex. VA-6) while others have two (ex. TX-21). Besides this, the state abbreviations appear in the same position in each cell, so this code works for every sponsor.
+
+**Note:** Sponsors from U.S. Territories made up approximately 1% of the data, and were not included in the analysis that took place after cleaning. There was also a small portion of bills for which no sponsor information was available.
+
+Upon cleaning the existing data and extracting the states into their own column, the 6 spreadsheets were combined to include all 13,358 bills passed in a single table. A preview of this table can be seen here:
+
+```{r billsdata}
+kable(billsdata[1:9,])
+```
+
+Using this table, we can proceed in our analysis.
+
+## Analysis
+
+Before we answer the initial question, we can first look at which states passed the most bills overall, which can be seen in the chart below:
+
+![](C:\Users\thege\Documents\Bill Data\Bills Passed (1973-2025).png)
+
+ 
+
+Unsurprisingly, California, New York, and Texas have the lead, as they are the states which, on average, have had the most representatives since 1970. However, this does not mean that their lawmakers are the most efficient. In order to make that determination, we must factor in how many representatives each state has. This question is not as simple as it sounds, as our data goes back as far as 1973, and in the last 52 years, the number of representatives in many states has changed. According to the [U.S. Census Bureau](https://www2.census.gov/programs-surveys/decennial/2020/data/apportionment/apportionment-2020-tableC1.pdf), California currently has 52 representatives, but had only 43 in 1970. To account for this shifting value, an average value was calculated for each state by simply averaging the number of representatives each state had over the past few decades. California's average value comes out to approximately 49.67 representatives.
+
+Using this new average value, we are able to calculate what we will call an "Efficiency Score" for each state. This metric is calculated by taking the total number of bills passed between 1973 and 2025, dividing it by the average number of representatives since 1970, then dividing once more by 52, which is the number of years since 1973. The unit of our score is "bills per representative per year". When measured using this metric, the top 10 states are in stark contrast to our previous chart:
+
+![](C:\Users\thege\Documents\Bill Data\Average Bills per Representative per Year (1).png)
+
+Here, we can see that the top 3 most efficient states are Alaska, Vermont, and Montana. Interestingly, these are all states which have very few representatives, with Alaska and Vermont both only having 1, and Montana only having 2. In fact, if we plot the average number of seats against the efficiency score of each state, we can see that a higher number of seats generally produces a lower efficiency score:
+
+```{r betterbillsdata}
+ ggplot(data=betterbillsdata)+
+  geom_point(mapping=aes(x=Average_seats, y=Efficiency))+
+  geom_smooth(mapping=aes(x=Average_seats, y=Efficiency))
+
+```
+
+Finally, let us visualize this data using a map of the United States, color coded by which states have the highest efficiency. An interactive version of this map can be found [here](https://public.tableau.com/app/profile/christopher.dedonato/viz/LawmakerEfficiency/Dashboard1) on Tableau.
+
+![](C:\Users\thege\Documents\Bill Data\Tableau Preview.png)
+
+## Conclusion
+
+In conclusion, we can see that states with a smaller number of representatives seem to have a higher lawmaker efficiency. This could potentially be the result of them having an advantage, since 1 law passed by a representative in Alaska will count much more towards their score than 1 law passed by a representative in California. However, the point still stands that on average, the representatives in these less-populated states pass bills at a higher rate than representatives in more densely-populated states. The root causes of this certainly warrant further analysis, but for now, the answer to our inital question is Alaska. With an efficiency score of approximately 4.06, Alaskan representatives have been the most successful in getting bills passed into law since 1973.
+
+### Sources
+
+[congress.gov](congress.gov)
+
+[https://www2.census.gov/programs-surveys/decennial/2020/data/apportionment/apportionment-2020-tableC1.pdf](https://www2.census.gov/programs-surveys/decennial/2020/data/apportionment/apportionment-2020-tableC1.pdf)
+
+R Core Team (2021). R: A language and environment for statistical
+computing. R Foundation for Statistical Computing, Vienna, Austria.
+URL https://www.R-project.org/.
